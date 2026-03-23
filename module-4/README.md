@@ -66,21 +66,23 @@ WORDS = ["python", "neural", "tensor", "matrix", "vector",
 class WordGameEnvironment(Environment):
     SUPPORTS_CONCURRENT_SESSIONS = True  # Allow multiple simultaneous clients
 
+    MAX_ATTEMPTS = 10
+
     def __init__(self):
         self._state = WordGameState()
         self._target = ""
         self._guessed = set()
-        self._remaining = 6
+        self._remaining = self.MAX_ATTEMPTS
 
     def reset(self, seed=None, episode_id=None, **kwargs) -> WordGameObservation:
         self._target = random.choice(WORDS)
         self._guessed = set()
-        self._remaining = 6
+        self._remaining = self.MAX_ATTEMPTS
         self._state = WordGameState(
             episode_id=episode_id or str(uuid.uuid4()),
             step_count=0,
             target_word=self._target,
-            max_attempts=6,
+            max_attempts=self.MAX_ATTEMPTS,
         )
         return WordGameObservation(
             done=False,

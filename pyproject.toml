@@ -22,5 +22,5 @@ dev = ["pytest", "httpx"]
 where = ["."]
 include = ["*"]
 
-# No scripts section — server is launched via Dockerfile CMD
-# To run locally: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+[project.scripts]
+server = "uvicorn server.app:app --host 0.0.0.0 --port 8000"

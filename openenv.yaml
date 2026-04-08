@@ -1,0 +1,14 @@
+name: support-triage-env
+version: "1.0.0"
+description: >
+  A real-world customer support ticket resolution environment for LLM agent training.
+  Agents act as AI support managers: classifying tickets, drafting knowledge-base
+  responses, and making escalation decisions on realistic enterprise scenarios.
+tags:
+  - customer-support
+  - triage
+  - nlp
+  - real-world
+  - text
+author: support-triage-team
+license: Apache-2.0

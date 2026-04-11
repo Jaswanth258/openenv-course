@@ -1,6 +1,13 @@
-# Customer Support Triage — OpenEnv Environment
+---
+title: Support Triage Env
+emoji: 🛠️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 8000
+---
 
-[![OpenEnv](https://img.shields.io/badge/OpenEnv-Compatible-blue)](https://github.com/meta-pytorch/OpenEnv)
+# Customer Support Triage — OpenEnv Environment
 [![Python](https://img.shields.io/badge/python-3.10%2B-brightgreen)](https://python.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 

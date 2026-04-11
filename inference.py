@@ -5,7 +5,7 @@ MANDATORY ENVIRONMENT VARIABLES:
   API_BASE_URL      LLM inference endpoint  (default: HF router)
   MODEL_NAME        Model identifier         (default: Qwen2.5-72B-Instruct)
   HF_TOKEN          Hugging Face / API key
-  LOCAL_IMAGE_NAME  Docker image name for the environment
+  LOCAL_IMAGE_NAME  Docker image name for the environment (optional)
 
 STDOUT FORMAT (strictly enforced for evaluation):
   [START] task=<task_id> env=support-triage model=<model>
@@ -18,7 +18,9 @@ Runs all 3 tasks sequentially. Total runtime target: < 5 minutes.
 import asyncio
 import json
 import os
+import sys
 import textwrap
+import time
 from typing import List, Optional
 
 from openai import OpenAI
@@ -28,6 +30,7 @@ API_KEY        = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "")
 API_BASE_URL   = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME     = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 IMAGE_NAME     = os.getenv("LOCAL_IMAGE_NAME", "")
+ENV_URL        = os.getenv("ENV_URL", "http://localhost:8000")
 BENCHMARK      = "support-triage"
 SUCCESS_THRESHOLD = 0.5   # score >= 0.5 counts as success
 
@@ -195,21 +198,56 @@ async def run_episode(env, client: OpenAI, task_id: str) -> dict:
     return {"task_id": task_id, "score": score, "success": success, "steps": steps_taken}
 
 
+# ── Environment connection ─────────────────────────────────────────────────────
+
+async def connect_env():
+    """
+    Connect to the environment.
+    Priority order:
+      1. If LOCAL_IMAGE_NAME is set, launch a Docker container via from_docker_image()
+      2. Otherwise, connect to the already-running server at ENV_URL (default localhost:8000)
+    The Phase 2 validator builds + runs the Docker image itself, then calls inference.py.
+    So inference.py just needs to connect to the running container.
+    """
+    # Make sure repo root is on PYTHONPATH for local imports
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from client import SupportTriageEnv
+
+    if IMAGE_NAME:
+        print(f"[DEBUG] Launching Docker container from image: {IMAGE_NAME}", flush=True)
+        env = await SupportTriageEnv.from_docker_image(IMAGE_NAME)
+        return env
+    else:
+        # Connect to the already-running container (Phase 2 validator starts it for us)
+        print(f"[DEBUG] Connecting to running environment at: {ENV_URL}", flush=True)
+        env = SupportTriageEnv(base_url=ENV_URL)
+
+        # Wait for the server to be ready (up to 30 seconds)
+        import httpx
+        for attempt in range(30):
+            try:
+                async with httpx.AsyncClient() as http:
+                    resp = await http.get(f"{ENV_URL}/health", timeout=2.0)
+                    if resp.status_code == 200:
+                        print(f"[DEBUG] Server ready after {attempt + 1}s", flush=True)
+                        break
+            except Exception:
+                pass
+            await asyncio.sleep(1.0)
+
+        return env
+
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 async def main() -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
-    # Import client here (works whether package is installed or run from repo root)
-    import sys, os
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from client import SupportTriageEnv
-
     task_ids = ["task_1_easy", "task_2_medium", "task_3_hard"]
     all_results = []
 
-    # Start one Docker container; the env cycles through the 3 tasks on each reset()
-    env = await SupportTriageEnv.from_docker_image(IMAGE_NAME)
+    env = await connect_env()
 
     try:
         for task_id in task_ids:

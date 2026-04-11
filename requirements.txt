@@ -1,3 +1,4 @@
 # Server-side dependencies (used inside the Docker container)
 # openenv-core already includes fastapi, uvicorn, pydantic, websockets
 openenv-core>=0.2.3
+httpx>=0.24.0

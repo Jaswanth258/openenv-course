@@ -249,12 +249,16 @@ class SupportTriageEnvironment(Environment):
 
     def _grade(self, action: SupportAction) -> Tuple[float, str]:
         if self._task_id == "task_1_easy":
-            return self._grade_task_1(action)
-        if self._task_id == "task_2_medium":
-            return self._grade_task_2(action)
-        if self._task_id == "task_3_hard":
-            return self._grade_task_3(action)
-        return 0.0, "Unknown task."
+            score, feedback = self._grade_task_1(action)
+        elif self._task_id == "task_2_medium":
+            score, feedback = self._grade_task_2(action)
+        elif self._task_id == "task_3_hard":
+            score, feedback = self._grade_task_3(action)
+        else:
+            score, feedback = 0.0, "Unknown task."
+        # Clamp to strictly open interval (0, 1) as required by OpenEnv validator
+        score = max(0.01, min(0.99, score))
+        return round(score, 4), feedback
 
     # ── Graders ───────────────────────────────────────────────────────────────
 
